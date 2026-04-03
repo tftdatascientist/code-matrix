@@ -104,7 +104,7 @@ export default function App() {
         </div>
 
         {/* Command input (hidden by default, Ctrl+/ to toggle) */}
-        <CommandInput send={send} subscribe={subscribe} />
+        <CommandInput send={send} subscribe={subscribe} autoShow={true} />
 
         {/* Disconnect overlay */}
         {status !== 'connected' && (

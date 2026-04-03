@@ -4,12 +4,13 @@ import type { WSMessage } from '../types/protocol';
 interface CommandInputProps {
   send: (channel: string, payload: unknown) => void;
   subscribe: (channel: string, handler: (msg: WSMessage) => void) => () => void;
+  autoShow?: boolean;
 }
 
 const MAX_LENGTH = 10000;
 
-export function CommandInput({ send }: CommandInputProps) {
-  const [visible, setVisible] = useState(false);
+export function CommandInput({ send, autoShow = false }: CommandInputProps) {
+  const [visible, setVisible] = useState(autoShow);
   const [value, setValue] = useState('');
   const [confirm, setConfirm] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
