@@ -30,11 +30,17 @@ export class PtySpawner extends EventEmitter<PtySpawnerEvents> {
   }
 
   async start(): Promise<void> {
-    const command = this.options.command ?? 'claude';
-    const args = this.options.args ?? [];
+    const userCommand = this.options.command ?? 'claude';
+    const userArgs = this.options.args ?? [];
     const cols = this.options.cols ?? 120;
     const rows = this.options.rows ?? 40;
     const cwd = this.options.cwd ?? process.cwd();
+
+    // On Windows, commands like "claude" are .cmd/.bat wrappers.
+    // node-pty can't execute them directly — must go through cmd.exe.
+    const isWindows = platform() === 'win32';
+    const command = isWindows ? 'cmd.exe' : userCommand;
+    const args = isWindows ? ['/c', userCommand, ...userArgs] : userArgs;
 
     try {
       this.ptyProcess = pty.spawn(command, args, {

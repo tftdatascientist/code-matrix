@@ -1,5 +1,11 @@
+import { config } from 'dotenv';
+import { resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+
+// Load .env from project root (three levels up from packages/bridge/src/)
+config({ path: resolve(import.meta.dirname ?? '.', '../../../.env') });
+
 import { PtyReader } from './pty-reader.js';
 import { PtySpawner } from './pty-spawner.js';
 import { BridgeWSServer } from './ws-server.js';
