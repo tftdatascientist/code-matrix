@@ -1,0 +1,17 @@
+{
+  "name": "matrix-gui",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "packages/bridge",
+    "packages/gui"
+  ],
+  "scripts": {
+    "dev": "concurrently -n bridge,gui -c green,cyan \"npm run dev -w packages/bridge\" \"npm run dev -w packages/gui\"",
+    "dev:bridge": "npm run dev -w packages/bridge",
+    "dev:gui": "npm run dev -w packages/gui"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  }
+}

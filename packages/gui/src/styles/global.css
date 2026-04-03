@@ -1,0 +1,542 @@
+/* ==============================
+   Matrix GUI — Global Styles
+   ============================== */
+
+:root {
+  /* Matrix Greens */
+  --matrix-green-100: #00FF41;
+  --matrix-green-80:  #00CC33;
+  --matrix-green-60:  #009926;
+  --matrix-green-40:  #006619;
+  --matrix-green-20:  #003D0F;
+
+  /* Accents */
+  --matrix-amber:     #FFB800;
+  --matrix-red:       #FF3333;
+  --matrix-cyan:      #00D4FF;
+  --matrix-white:     #E0E0E0;
+
+  /* Backgrounds */
+  --bg-void:          #000000;
+  --bg-panel:         #0A0A0A;
+  --bg-terminal:      #050505;
+  --bg-glow:          rgba(0, 255, 65, 0.03);
+
+  /* Effects */
+  --glow-green:       0 0 10px rgba(0, 255, 65, 0.5), 0 0 20px rgba(0, 255, 65, 0.2);
+  --glow-green-intense: 0 0 10px rgba(0, 255, 65, 0.8), 0 0 40px rgba(0, 255, 65, 0.3);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--bg-void);
+  color: var(--matrix-green-100);
+  font-family: 'Share Tech Mono', 'Fira Code', 'Consolas', monospace;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ==============================
+   Title Bar (frameless Electron drag region)
+   ============================== */
+
+.title-bar {
+  -webkit-app-region: drag;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--matrix-green-20);
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.title-bar__title {
+  font-size: 9px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--matrix-green-40);
+}
+
+/* ==============================
+   Layout
+   ============================== */
+
+.matrix-root {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 1;
+}
+
+.matrix-main {
+  flex: 1;
+  display: flex;
+  min-height: 0; /* allow flex children to shrink */
+  padding: 4px;
+  gap: 4px;
+}
+
+/* ==============================
+   Terminal Mirror
+   ============================== */
+
+.terminal-mirror {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--matrix-green-40);
+  box-shadow: var(--glow-green);
+  background: var(--bg-terminal);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.terminal-mirror__container {
+  width: 100%;
+  height: 100%;
+}
+
+/* Override xterm.js background to match */
+.terminal-mirror .xterm-viewport {
+  background: var(--bg-terminal) !important;
+}
+
+/* ==============================
+   Session Panel
+   ============================== */
+
+.session-panel {
+  width: 220px;
+  flex-shrink: 0;
+  background: var(--bg-panel);
+  border: 1px solid var(--matrix-green-40);
+  box-shadow: var(--glow-green);
+  border-radius: 2px;
+  padding: 12px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.session-panel__section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.session-panel__divider {
+  border: none;
+  border-top: 1px solid var(--matrix-green-20);
+  margin: 6px 0;
+}
+
+/* Metric rows */
+.metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.metric__label {
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--matrix-green-60);
+  user-select: none;
+}
+
+.metric__value {
+  font-size: 14px;
+  font-family: 'Share Tech Mono', 'Fira Code', monospace;
+  color: var(--matrix-green-100);
+  text-shadow: 0 0 6px rgba(0, 255, 65, 0.4);
+  transition: color 0.5s ease, text-shadow 0.5s ease;
+}
+
+.metric-value--green { color: var(--matrix-green-100); }
+.metric-value--amber { color: var(--matrix-amber); text-shadow: 0 0 6px rgba(255, 184, 0, 0.4); }
+.metric-value--red   { color: var(--matrix-red); text-shadow: 0 0 6px rgba(255, 51, 51, 0.4); }
+
+/* Progress bars */
+.progress-bar {
+  font-size: 13px;
+  font-family: 'Share Tech Mono', 'Fira Code', monospace;
+  color: var(--matrix-green-100);
+  transition: color 0.5s ease;
+  letter-spacing: 0;
+}
+
+.progress-bar--green { color: var(--matrix-green-100); }
+.progress-bar--amber { color: var(--matrix-amber); }
+.progress-bar--red   { color: var(--matrix-red); }
+.progress-bar--empty { color: var(--matrix-green-40); }
+
+.progress-bar__value {
+  font-size: 12px;
+}
+
+/* Bypass indicator */
+.metric__bypass {
+  font-size: 12px;
+  color: var(--matrix-green-60);
+}
+
+.metric__bypass--on {
+  color: var(--matrix-amber);
+  text-shadow: 0 0 8px rgba(255, 184, 0, 0.5);
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Activity indicator */
+.activity {
+  font-size: 13px;
+}
+
+.activity__icon {
+  display: inline-block;
+}
+
+.activity--thinking .activity__icon {
+  animation: pulse-dot 1s ease-in-out infinite;
+  color: var(--matrix-green-100);
+}
+
+.activity--writing {
+  color: var(--matrix-green-80);
+}
+
+.activity--executing {
+  color: var(--matrix-amber);
+}
+
+.activity--error {
+  color: var(--matrix-red);
+}
+
+.activity--idle {
+  color: var(--matrix-green-60);
+}
+
+.activity--disconnected {
+  color: var(--matrix-green-40);
+}
+
+.activity__detail {
+  color: var(--matrix-green-60);
+  font-size: 11px;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { text-shadow: 0 0 8px rgba(255, 184, 0, 0.3); }
+  50% { text-shadow: 0 0 16px rgba(255, 184, 0, 0.7); }
+}
+
+/* ==============================
+   Matrix Rain Canvas
+   ============================== */
+
+.matrix-rain {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* ==============================
+   CRT Overlay
+   ============================== */
+
+.crt-scanlines {
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    transparent 0px,
+    rgba(0, 0, 0, 0.12) 1px,
+    transparent 2px
+  );
+  pointer-events: none;
+  z-index: 9998;
+}
+
+.crt-vignette {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.55) 100%);
+  pointer-events: none;
+  z-index: 9997;
+  animation: crt-flicker 8s ease-in-out infinite;
+}
+
+@keyframes crt-flicker {
+  0%, 100% { opacity: 1; }
+  92% { opacity: 1; }
+  93% { opacity: 0.97; }
+  94% { opacity: 1; }
+  96% { opacity: 0.98; }
+  97% { opacity: 1; }
+}
+
+/* ==============================
+   State-based visual effects
+   ============================== */
+
+/* Executing flash — applied to .matrix-root */
+.flash-effect {
+  animation: exec-flash 200ms step-end;
+}
+
+@keyframes exec-flash {
+  0% { filter: brightness(1.3); }
+  100% { filter: brightness(1); }
+}
+
+/* ==============================
+   Command Input (Faza 5 — furtka)
+   ============================== */
+
+.command-input {
+  position: fixed;
+  bottom: 28px; /* above status bar */
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(600px, calc(100vw - 32px));
+  background: rgba(5, 5, 5, 0.95);
+  border: 1px solid var(--matrix-green-40);
+  box-shadow: var(--glow-green), 0 -4px 20px rgba(0, 0, 0, 0.5);
+  border-radius: 4px;
+  z-index: 200;
+  font-family: 'Fira Code', 'Consolas', monospace;
+  font-size: 13px;
+}
+
+.command-input__header {
+  padding: 4px 10px;
+  border-bottom: 1px solid var(--matrix-green-20);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.command-input__lock {
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--matrix-amber);
+  text-shadow: 0 0 6px rgba(255, 184, 0, 0.3);
+}
+
+.command-input__field {
+  display: flex;
+  align-items: flex-start;
+  padding: 8px 10px;
+  gap: 6px;
+}
+
+.command-input__prompt {
+  color: var(--matrix-green-100);
+  text-shadow: 0 0 6px rgba(0, 255, 65, 0.5);
+  flex-shrink: 0;
+  line-height: 1.4;
+}
+
+.command-input__textarea {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--matrix-green-100);
+  font-family: inherit;
+  font-size: inherit;
+  resize: none;
+  line-height: 1.4;
+  caret-color: var(--matrix-green-100);
+}
+
+.command-input__textarea::placeholder {
+  color: var(--matrix-green-40);
+}
+
+.command-input__confirm {
+  padding: 4px 10px;
+  font-size: 11px;
+  color: var(--matrix-amber);
+  background: rgba(255, 184, 0, 0.05);
+  border-top: 1px solid rgba(255, 184, 0, 0.2);
+}
+
+.command-input__footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  border-top: 1px solid var(--matrix-green-20);
+  font-size: 9px;
+  color: var(--matrix-green-40);
+}
+
+.command-input__sep {
+  color: var(--matrix-green-20);
+}
+
+.command-input__btn {
+  background: none;
+  border: 1px solid var(--matrix-green-40);
+  color: var(--matrix-green-60);
+  font-family: inherit;
+  font-size: 9px;
+  padding: 1px 6px;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.command-input__btn:hover {
+  color: var(--matrix-green-100);
+  border-color: var(--matrix-green-100);
+  box-shadow: 0 0 4px rgba(0, 255, 65, 0.3);
+}
+
+/* Responsive: hide panel on small screens */
+@media (max-width: 800px) {
+  .session-panel {
+    display: none;
+  }
+}
+
+@media (max-width: 1200px) and (min-width: 801px) {
+  .session-panel {
+    width: 180px;
+    padding: 8px;
+  }
+  .metric__label {
+    font-size: 8px;
+    letter-spacing: 1px;
+  }
+  .metric__value {
+    font-size: 12px;
+  }
+}
+
+/* ==============================
+   Status Bar
+   ============================== */
+
+.status-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  background: var(--bg-panel);
+  border-top: 1px solid var(--matrix-green-20);
+  font-size: 10px;
+  font-family: 'Share Tech Mono', monospace;
+  color: var(--matrix-green-60);
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.status-bar__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-bar__dot--connected {
+  background: var(--matrix-green-100);
+  box-shadow: 0 0 6px var(--matrix-green-100);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+.status-bar__dot--connecting {
+  background: var(--matrix-amber);
+  animation: pulse-dot 1s ease-in-out infinite;
+}
+
+.status-bar__dot--disconnected {
+  background: var(--matrix-red);
+}
+
+.status-bar__label {
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--matrix-green-80);
+}
+
+.status-bar__sep {
+  color: var(--matrix-green-40);
+}
+
+.status-bar__info {
+  color: var(--matrix-green-60);
+}
+
+/* ==============================
+   Disconnect Overlay
+   ============================== */
+
+.disconnect-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.disconnect-overlay__content {
+  text-align: center;
+}
+
+.disconnect-overlay__text {
+  font-size: 16px;
+  color: var(--matrix-green-80);
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  margin-bottom: 16px;
+  text-shadow: var(--glow-green);
+  animation: pulse-text 1.5s ease-in-out infinite;
+}
+
+.disconnect-overlay__bar {
+  width: 200px;
+  height: 2px;
+  background: var(--matrix-green-20);
+  border-radius: 1px;
+  overflow: hidden;
+}
+
+.disconnect-overlay__bar-fill {
+  width: 40%;
+  height: 100%;
+  background: var(--matrix-green-100);
+  box-shadow: 0 0 8px var(--matrix-green-100);
+  animation: loading-bar 2s ease-in-out infinite;
+}
+
+/* ==============================
+   Animations
+   ============================== */
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes pulse-text {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes loading-bar {
+  0% { transform: translateX(-100%); }
+  50% { transform: translateX(150%); }
+  100% { transform: translateX(400%); }
+}
