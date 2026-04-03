@@ -39,10 +39,12 @@ export class PtySpawner extends EventEmitter<PtySpawnerEvents> {
     // On Windows, commands like "claude" are .cmd/.bat wrappers.
     // node-pty can't execute them directly — must go through cmd.exe.
     // chcp 65001 sets UTF-8 code page so Unicode renders correctly.
+    // /c takes ONE string — the full command line to execute.
     const isWindows = platform() === 'win32';
     const command = isWindows ? 'cmd.exe' : userCommand;
+    const fullCmd = [userCommand, ...userArgs].join(' ');
     const args = isWindows
-      ? ['/c', 'chcp', '65001', '>nul', '&', userCommand, ...userArgs]
+      ? ['/c', `chcp 65001 >nul & ${fullCmd}`]
       : userArgs;
 
     try {
