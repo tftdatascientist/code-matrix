@@ -20,6 +20,7 @@ const DEFAULT_STATE: SessionState = {
 
 interface UseSessionMetricsOptions {
   subscribe: (channel: string, handler: (msg: WSMessage) => void) => () => void;
+  sessionIndex?: number;
 }
 
 interface UseSessionMetricsReturn {
@@ -27,21 +28,21 @@ interface UseSessionMetricsReturn {
   state: SessionState;
 }
 
-export function useSessionMetrics({ subscribe }: UseSessionMetricsOptions): UseSessionMetricsReturn {
+export function useSessionMetrics({ subscribe, sessionIndex = 0 }: UseSessionMetricsOptions): UseSessionMetricsReturn {
   const [metrics, setMetrics] = useState<SessionMetrics>(DEFAULT_METRICS);
   const [state, setState] = useState<SessionState>(DEFAULT_STATE);
 
   useEffect(() => {
     const unsubs = [
-      subscribe('session:metrics', (msg) => {
+      subscribe(`session:metrics:${sessionIndex}`, (msg) => {
         setMetrics(msg.payload as SessionMetrics);
       }),
-      subscribe('session:state', (msg) => {
+      subscribe(`session:state:${sessionIndex}`, (msg) => {
         setState(msg.payload as SessionState);
       }),
     ];
     return () => unsubs.forEach(u => u());
-  }, [subscribe]);
+  }, [subscribe, sessionIndex]);
 
   return { metrics, state };
 }

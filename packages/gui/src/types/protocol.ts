@@ -23,8 +23,3 @@ export interface TerminalReplayPayload {
   lines: number;
 }
 
-/** command:input — GUI → Bridge (future, disabled by default) */
-export interface CommandInputPayload {
-  type: 'text' | 'interrupt' | 'confirm';
-  text?: string;
-}

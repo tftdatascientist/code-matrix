@@ -32,13 +32,14 @@ const MATRIX_THEME = {
 interface UseTerminalOptions {
   subscribe: (channel: string, handler: (msg: WSMessage) => void) => () => void;
   send: (channel: string, payload: unknown) => void;
+  sessionIndex?: number;
 }
 
 interface UseTerminalReturn {
   containerRef: React.RefCallback<HTMLDivElement>;
 }
 
-export function useTerminal({ subscribe, send }: UseTerminalOptions): UseTerminalReturn {
+export function useTerminal({ subscribe, send, sessionIndex = 0 }: UseTerminalOptions): UseTerminalReturn {
   const termRef = useRef<Terminal | null>(null);
   const fitRef = useRef<FitAddon | null>(null);
   const containerElRef = useRef<HTMLDivElement | null>(null);
@@ -83,33 +84,45 @@ export function useTerminal({ subscribe, send }: UseTerminalOptions): UseTermina
     };
   }, []);
 
-  // Subscribe to terminal data channels
+  // Subscribe to per-session terminal data channels
   useEffect(() => {
     const unsubs: (() => void)[] = [];
 
-    unsubs.push(subscribe('terminal:data', (msg) => {
+    unsubs.push(subscribe(`terminal:data:${sessionIndex}`, (msg) => {
       const payload = msg.payload as TerminalDataPayload;
       const bytes = Uint8Array.from(atob(payload.data), c => c.charCodeAt(0));
       termRef.current?.write(bytes);
     }));
 
-    unsubs.push(subscribe('terminal:replay', (msg) => {
+    unsubs.push(subscribe(`terminal:replay:${sessionIndex}`, (msg) => {
       const payload = msg.payload as TerminalReplayPayload;
       const bytes = Uint8Array.from(atob(payload.data), c => c.charCodeAt(0));
       termRef.current?.write(bytes);
     }));
 
     return () => { unsubs.forEach(u => u()); };
-  }, [subscribe]);
+  }, [subscribe, sessionIndex]);
 
-  // Handle resize
+  // Forward user keystrokes to per-session PTY stdin
+  useEffect(() => {
+    const term = termRef.current;
+    if (!term) return;
+
+    const disposable = term.onData((data) => {
+      send(`terminal:input:${sessionIndex}`, { data });
+    });
+
+    return () => disposable.dispose();
+  }, [send, sessionIndex]);
+
+  // Handle resize — send per-session resize
   useEffect(() => {
     const handleResize = () => {
       if (fitRef.current && containerElRef.current) {
         fitRef.current.fit();
         const term = termRef.current;
         if (term) {
-          send('terminal:resize', { cols: term.cols, rows: term.rows });
+          send(`terminal:resize:${sessionIndex}`, { cols: term.cols, rows: term.rows });
         }
       }
     };
@@ -127,7 +140,7 @@ export function useTerminal({ subscribe, send }: UseTerminalOptions): UseTermina
       window.removeEventListener('resize', handleResize);
       observer?.disconnect();
     };
-  }, [send]);
+  }, [send, sessionIndex]);
 
   // Ref callback — opens terminal when container DOM element appears
   const containerRef = useCallback((el: HTMLDivElement | null) => {

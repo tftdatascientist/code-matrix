@@ -1,11 +1,11 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useSessionMetrics } from './hooks/useSessionMetrics';
+import { useSessionInfo } from './hooks/useSessionInfo';
 import { TerminalMirror } from './components/TerminalMirror';
-import { SessionPanel } from './components/SessionPanel';
+import { SessionInfoPanel } from './components/SessionInfoPanel';
 import { MatrixRain } from './components/MatrixRain';
 import { CRTOverlay } from './components/CRTOverlay';
-import { CommandInput } from './components/CommandInput';
 import type { WSMessage } from './types/protocol';
 import type { SystemHealth } from './types/session';
 
@@ -25,10 +25,23 @@ function useRainParams(ccStatus: string, wsStatus: string) {
 
 export default function App() {
   const { status, subscribe, send } = useWebSocket();
-  const { metrics, state } = useSessionMetrics({ subscribe });
+  const [sessionCount, setSessionCount] = useState(1);
+  const { state } = useSessionMetrics({ subscribe, sessionIndex: 0 });
+  const infoLeft = useSessionInfo({ subscribe, sessionIndex: 0 });
+  const infoRight = useSessionInfo({ subscribe, sessionIndex: 1 });
   const [health, setHealth] = useState<SystemHealth | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const prevStateRef = useRef(state.status);
+
+  // Read session count from bridge config
+  useEffect(() => {
+    return subscribe('system:config', (msg: WSMessage) => {
+      const config = msg.payload as { sessionCount: number };
+      if (config.sessionCount > 0) {
+        setSessionCount(config.sessionCount);
+      }
+    });
+  }, [subscribe]);
 
   useEffect(() => {
     return subscribe('system:health', (msg: WSMessage) => {
@@ -53,6 +66,7 @@ export default function App() {
   }, [state.status, triggerFlash]);
 
   const rain = useRainParams(state.status, status);
+  const isMulti = sessionCount >= 2;
 
   return (
     <>
@@ -71,8 +85,19 @@ export default function App() {
 
         {/* Main content area */}
         <div className="matrix-main">
-          <TerminalMirror subscribe={subscribe} send={send} />
-          <SessionPanel metrics={metrics} state={state} />
+          {isMulti ? (
+            <>
+              <SessionInfoPanel info={infoLeft} side="left" />
+              <TerminalMirror subscribe={subscribe} send={send} sessionIndex={0} />
+              <TerminalMirror subscribe={subscribe} send={send} sessionIndex={1} />
+              <SessionInfoPanel info={infoRight} side="right" />
+            </>
+          ) : (
+            <>
+              <SessionInfoPanel info={infoLeft} side="left" />
+              <TerminalMirror subscribe={subscribe} send={send} sessionIndex={0} />
+            </>
+          )}
         </div>
 
         {/* Status bar */}
@@ -83,28 +108,25 @@ export default function App() {
             {status === 'connected' && 'CONNECTED'}
             {status === 'disconnected' && 'DISCONNECTED'}
           </span>
-          <span className="status-bar__sep">│</span>
+          <span className="status-bar__sep">|</span>
           <span className="status-bar__info">ws://localhost:7999</span>
           {health && (
             <>
-              <span className="status-bar__sep">│</span>
+              <span className="status-bar__sep">|</span>
               <span className="status-bar__info">
                 PTY: {health.ptyConnected ? 'ON' : 'OFF'}
               </span>
-              <span className="status-bar__sep">│</span>
+              <span className="status-bar__sep">|</span>
               <span className="status-bar__info">
-                buffer: {health.bufferSize}
+                sessions: {sessionCount}
               </span>
-              <span className="status-bar__sep">│</span>
+              <span className="status-bar__sep">|</span>
               <span className="status-bar__info">
                 clients: {health.wsClients}
               </span>
             </>
           )}
         </div>
-
-        {/* Command input (hidden by default, Ctrl+/ to toggle) */}
-        <CommandInput send={send} subscribe={subscribe} autoShow={true} />
 
         {/* Disconnect overlay */}
         {status !== 'connected' && (

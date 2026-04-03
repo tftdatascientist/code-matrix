@@ -7,22 +7,31 @@ export interface WSMessageEnvelope {
 }
 
 interface ReplayBuffer {
-  chunks: string[]; // base64-encoded terminal data chunks
+  chunks: string[]; // binary-encoded terminal data chunks
   maxSize: number;
 }
 
 export class BridgeWSServer {
   private wss: WebSocketServer;
-  private buffer: ReplayBuffer;
+  private buffers: ReplayBuffer[] = [];
+  private bufferMaxSize: number;
+  private sessionCount: number;
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private startTime = Date.now();
-  private _ptyConnected = false;
+  private _ptyConnected: boolean[] = [];
   private connectHandlers: Array<(ws: WebSocket) => void> = [];
   private messageHandlers: Array<(msg: WSMessageEnvelope) => void> = [];
 
-  constructor(port: number, bufferSize: number) {
+  constructor(port: number, bufferSize: number, sessionCount = 1) {
     this.wss = new WebSocketServer({ port });
-    this.buffer = { chunks: [], maxSize: bufferSize };
+    this.bufferMaxSize = bufferSize;
+    this.sessionCount = sessionCount;
+
+    // Initialize per-session replay buffers and PTY status
+    for (let i = 0; i < sessionCount; i++) {
+      this.buffers.push({ chunks: [], maxSize: bufferSize });
+      this._ptyConnected.push(false);
+    }
 
     this.wss.on('error', (err: NodeJS.ErrnoException) => {
       if (err.code === 'EADDRINUSE') {
@@ -38,16 +47,22 @@ export class BridgeWSServer {
     this.wss.on('connection', (ws) => {
       console.log(`GUI client connected (total: ${this.wss.clients.size})`);
 
+      // Send config (session count) so GUI knows how many terminals to render
+      this.sendTo(ws, 'system:config', { sessionCount: this.sessionCount });
+
       // Send current health immediately
       this.sendTo(ws, 'system:health', this.getHealth());
 
-      // Replay buffer to new client
-      if (this.buffer.chunks.length > 0) {
-        const combined = this.buffer.chunks.join('');
-        this.sendTo(ws, 'terminal:replay', {
-          data: Buffer.from(combined, 'binary').toString('base64'),
-          lines: this.buffer.chunks.length,
-        });
+      // Replay per-session buffers to new client
+      for (let i = 0; i < this.sessionCount; i++) {
+        const buf = this.buffers[i];
+        if (buf.chunks.length > 0) {
+          const combined = buf.chunks.join('');
+          this.sendTo(ws, `terminal:replay:${i}`, {
+            data: Buffer.from(combined, 'binary').toString('base64'),
+            lines: buf.chunks.length,
+          });
+        }
       }
 
       // Let external handlers send initial state to new client
@@ -96,17 +111,20 @@ export class BridgeWSServer {
     }, 1000);
   }
 
-  /** Broadcast terminal data to all connected clients */
-  sendTerminalData(data: Buffer): void {
+  /** Broadcast terminal data for a specific session to all connected clients */
+  sendTerminalData(sessionIndex: number, data: Buffer): void {
     const base64 = data.toString('base64');
 
-    // Add to replay buffer
-    this.buffer.chunks.push(data.toString('binary'));
-    if (this.buffer.chunks.length > this.buffer.maxSize) {
-      this.buffer.chunks.shift();
+    // Add to per-session replay buffer
+    const buf = this.buffers[sessionIndex];
+    if (buf) {
+      buf.chunks.push(data.toString('binary'));
+      if (buf.chunks.length > buf.maxSize) {
+        buf.chunks.shift();
+      }
     }
 
-    this.broadcast('terminal:data', {
+    this.broadcast(`terminal:data:${sessionIndex}`, {
       data: base64,
       encoding: 'base64',
     });
@@ -127,8 +145,8 @@ export class BridgeWSServer {
     }
   }
 
-  set ptyConnected(value: boolean) {
-    this._ptyConnected = value;
+  setPtyConnected(sessionIndex: number, value: boolean): void {
+    this._ptyConnected[sessionIndex] = value;
   }
 
   private sendTo(ws: WebSocket, channel: string, payload: unknown): void {
@@ -144,9 +162,10 @@ export class BridgeWSServer {
   private getHealth() {
     return {
       uptime: Math.floor((Date.now() - this.startTime) / 1000),
-      ptyConnected: this._ptyConnected,
+      ptyConnected: this._ptyConnected.every(Boolean),
+      ptySessions: this._ptyConnected,
       wsClients: this.wss.clients.size,
-      bufferSize: this.buffer.chunks.length,
+      bufferSize: this.buffers.reduce((sum, b) => sum + b.chunks.length, 0),
       latency: 0,
     };
   }

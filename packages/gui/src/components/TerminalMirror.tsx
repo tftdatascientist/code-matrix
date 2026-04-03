@@ -5,10 +5,11 @@ import '@xterm/xterm/css/xterm.css';
 interface TerminalMirrorProps {
   subscribe: (channel: string, handler: (msg: WSMessage) => void) => () => void;
   send: (channel: string, payload: unknown) => void;
+  sessionIndex?: number;
 }
 
-export function TerminalMirror({ subscribe, send }: TerminalMirrorProps) {
-  const { containerRef } = useTerminal({ subscribe, send });
+export function TerminalMirror({ subscribe, send, sessionIndex = 0 }: TerminalMirrorProps) {
+  const { containerRef } = useTerminal({ subscribe, send, sessionIndex });
 
   return (
     <div className="terminal-mirror">

@@ -17,6 +17,14 @@ export interface SessionState {
   detail?: string;
 }
 
+/** session:info — per-session info (files, memory, MCPs) */
+export interface SessionInfo {
+  cwd: string;
+  filesRead: string[];
+  memoryItems: string[];
+  activeMcps: string[];
+}
+
 /** system:health — bridge health check */
 export interface SystemHealth {
   uptime: number;

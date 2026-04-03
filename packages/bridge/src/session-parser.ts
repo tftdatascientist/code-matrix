@@ -20,9 +20,17 @@ export interface SessionState {
   detail?: string;
 }
 
+export interface SessionInfo {
+  cwd: string;
+  filesRead: string[];
+  memoryItems: string[];
+  activeMcps: string[];
+}
+
 export interface SessionParserEvents {
   metrics: [SessionMetrics];
   state: [SessionState];
+  info: [SessionInfo];
 }
 
 const PATTERNS = {
@@ -40,6 +48,19 @@ const PATTERNS = {
   thinking: /[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]|thinking/i,
   toolUse: /(?:⠋|⠙|⠹|⠸|⠼|⠴|⠦|⠧|⠇|⠏)?\s*\b(Bash|Read|Write|Edit|Glob|Grep|Agent|WebSearch|WebFetch)\b/,
   error: /\bError\b|\berror:/i,
+
+  // File reads: "Read(file_path)" or "⏵ Read path" or spinner + Read + path
+  fileRead: /\bRead(?:\(|\s+)["']?([^\s"'()]+(?:\.[a-zA-Z]{1,10}))/g,
+  fileEdit: /\bEdit(?:\(|\s+)["']?([^\s"'()]+(?:\.[a-zA-Z]{1,10}))/g,
+  fileWrite: /\bWrite(?:\(|\s+)["']?([^\s"'()]+(?:\.[a-zA-Z]{1,10}))/g,
+
+  // Memory items: "- [Name](file.md) — description" or "name.md (123 tokens)"
+  memoryItem: /[-•]\s*\[([^\]]+)\]\(([^)]+)\)/g,
+  memoryTokens: /(\S+\.md)\s*\((\d+)\s*tokens?\)/g,
+
+  // MCP servers: "MCP Servers:" or "mcp__server_name" patterns
+  mcpServer: /mcp__([a-zA-Z0-9_]+?)__/g,
+  mcpLine: /(?:MCP|mcp)\s*(?:Servers?|servers?):\s*(.+)/i,
 };
 
 // Max chunks to buffer for multi-chunk matching
@@ -59,7 +80,18 @@ export class SessionParser extends EventEmitter<SessionParserEvents> {
   };
 
   private state: SessionState = { status: 'idle' };
+  private info: SessionInfo = {
+    cwd: '',
+    filesRead: [],
+    memoryItems: [],
+    activeMcps: [],
+  };
   private chunkBuffer: string[] = [];
+
+  setCwd(cwd: string): void {
+    this.info.cwd = cwd;
+    this.emit('info', { ...this.info });
+  }
 
   /** Feed raw terminal data (before ANSI stripping — we strip internally) */
   feed(rawData: Buffer | string): void {
@@ -76,6 +108,7 @@ export class SessionParser extends EventEmitter<SessionParserEvents> {
 
     this.parseMetrics(combined);
     this.parseState(stripped);
+    this.parseInfo(stripped);
   }
 
   private parseMetrics(text: string): void {
@@ -139,11 +172,80 @@ export class SessionParser extends EventEmitter<SessionParserEvents> {
     }
   }
 
+  private parseInfo(text: string): void {
+    let changed = false;
+
+    // Extract file paths from Read/Edit/Write tool uses
+    for (const pattern of [PATTERNS.fileRead, PATTERNS.fileEdit, PATTERNS.fileWrite]) {
+      pattern.lastIndex = 0;
+      let match;
+      while ((match = pattern.exec(text)) !== null) {
+        const filePath = match[1];
+        if (filePath && !this.info.filesRead.includes(filePath)) {
+          this.info.filesRead.push(filePath);
+          changed = true;
+        }
+      }
+    }
+
+    // Extract memory items: "- [Name](file.md)"
+    PATTERNS.memoryItem.lastIndex = 0;
+    let memMatch;
+    while ((memMatch = PATTERNS.memoryItem.exec(text)) !== null) {
+      const entry = memMatch[1];
+      if (entry && !this.info.memoryItems.includes(entry)) {
+        this.info.memoryItems.push(entry);
+        changed = true;
+      }
+    }
+
+    // Extract memory items: "file.md (123 tokens)"
+    PATTERNS.memoryTokens.lastIndex = 0;
+    while ((memMatch = PATTERNS.memoryTokens.exec(text)) !== null) {
+      const entry = `${memMatch[1]} (${memMatch[2]} tok)`;
+      if (!this.info.memoryItems.some(m => m.startsWith(memMatch![1]))) {
+        this.info.memoryItems.push(entry);
+        changed = true;
+      }
+    }
+
+    // Extract MCP server names
+    PATTERNS.mcpServer.lastIndex = 0;
+    let mcpMatch;
+    while ((mcpMatch = PATTERNS.mcpServer.exec(text)) !== null) {
+      const server = mcpMatch[1];
+      if (server && !this.info.activeMcps.includes(server)) {
+        this.info.activeMcps.push(server);
+        changed = true;
+      }
+    }
+
+    // MCP line format: "MCP Servers: name1, name2"
+    const mcpLineMatch = text.match(PATTERNS.mcpLine);
+    if (mcpLineMatch) {
+      const servers = mcpLineMatch[1].split(/[,;]/).map(s => s.trim()).filter(Boolean);
+      for (const s of servers) {
+        if (!this.info.activeMcps.includes(s)) {
+          this.info.activeMcps.push(s);
+          changed = true;
+        }
+      }
+    }
+
+    if (changed) {
+      this.emit('info', { ...this.info, filesRead: [...this.info.filesRead], memoryItems: [...this.info.memoryItems], activeMcps: [...this.info.activeMcps] });
+    }
+  }
+
   getMetrics(): SessionMetrics {
     return { ...this.metrics };
   }
 
   getState(): SessionState {
     return { ...this.state };
+  }
+
+  getInfo(): SessionInfo {
+    return { ...this.info, filesRead: [...this.info.filesRead], memoryItems: [...this.info.memoryItems], activeMcps: [...this.info.activeMcps] };
   }
 }
