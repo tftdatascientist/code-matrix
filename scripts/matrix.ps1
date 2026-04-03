@@ -27,12 +27,12 @@ $oldPids = netstat -ano | Select-String ":$WsPort\s" | ForEach-Object {
 
 if ($oldPids) {
     Write-Matrix "Cleaning up old processes on port ${WsPort}..."
-    foreach ($pid in $oldPids) {
+    foreach ($procId in $oldPids) {
         try {
-            Stop-Process -Id $pid -Force -ErrorAction Stop
-            Write-MatrixDim "Killed PID $pid"
+            Stop-Process -Id $procId -Force -ErrorAction Stop
+            Write-MatrixDim "Killed PID $procId"
         } catch {
-            Write-MatrixDim "PID $pid already gone"
+            Write-MatrixDim "PID $procId already gone"
         }
     }
     Start-Sleep -Seconds 1
@@ -105,12 +105,12 @@ finally {
     Remove-Job -Job $guiJob -Force -ErrorAction SilentlyContinue
 
     # Zabij procesy node na porcie bridge
-    $pids = netstat -ano | Select-String ":$WsPort\s" | ForEach-Object {
+    $procIds = netstat -ano | Select-String ":$WsPort\s" | ForEach-Object {
         ($_ -split '\s+')[-1]
     } | Sort-Object -Unique | Where-Object { $_ -match '^\d+$' -and $_ -ne '0' }
 
-    foreach ($pid in $pids) {
-        Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue
+    foreach ($procId in $procIds) {
+        Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
     }
 
     # Wyczysc env
