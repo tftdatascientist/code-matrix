@@ -89,14 +89,14 @@ export function useTerminal({ subscribe, send }: UseTerminalOptions): UseTermina
 
     unsubs.push(subscribe('terminal:data', (msg) => {
       const payload = msg.payload as TerminalDataPayload;
-      const decoded = atob(payload.data);
-      termRef.current?.write(decoded);
+      const bytes = Uint8Array.from(atob(payload.data), c => c.charCodeAt(0));
+      termRef.current?.write(bytes);
     }));
 
     unsubs.push(subscribe('terminal:replay', (msg) => {
       const payload = msg.payload as TerminalReplayPayload;
-      const decoded = atob(payload.data);
-      termRef.current?.write(decoded);
+      const bytes = Uint8Array.from(atob(payload.data), c => c.charCodeAt(0));
+      termRef.current?.write(bytes);
     }));
 
     return () => { unsubs.forEach(u => u()); };
