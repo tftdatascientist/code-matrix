@@ -80,6 +80,7 @@ body {
 .matrix-main {
   flex: 1;
   display: flex;
+  flex-direction: row-reverse; /* terminal right, panel left */
   min-height: 0; /* allow flex children to shrink */
   padding: 4px;
   gap: 4px;
@@ -107,6 +108,47 @@ body {
 /* Override xterm.js background to match */
 .terminal-mirror .xterm-viewport {
   background: var(--bg-terminal) !important;
+}
+
+/* ==============================
+   Scrollbar — Matrix theme
+   ============================== */
+
+/* Global scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-void);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--matrix-green-40);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--matrix-green-60);
+}
+
+/* xterm.js scrollbar override */
+.terminal-mirror .xterm-viewport::-webkit-scrollbar {
+  width: 6px;
+}
+
+.terminal-mirror .xterm-viewport::-webkit-scrollbar-track {
+  background: var(--bg-terminal);
+}
+
+.terminal-mirror .xterm-viewport::-webkit-scrollbar-thumb {
+  background: var(--matrix-green-40);
+  border-radius: 3px;
+}
+
+.terminal-mirror .xterm-viewport::-webkit-scrollbar-thumb:hover {
+  background: var(--matrix-green-60);
 }
 
 /* ==============================
@@ -147,7 +189,7 @@ body {
 }
 
 .metric__label {
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 2px;
   text-transform: uppercase;
   color: var(--matrix-green-60);
@@ -155,7 +197,7 @@ body {
 }
 
 .metric__value {
-  font-size: 14px;
+  font-size: 16px;
   font-family: 'Share Tech Mono', 'Fira Code', monospace;
   color: var(--matrix-green-100);
   text-shadow: 0 0 6px rgba(0, 255, 65, 0.4);
