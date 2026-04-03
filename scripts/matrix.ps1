@@ -41,7 +41,7 @@ if ($oldPids) {
 }
 
 # 1. Uruchom GUI w tle jako osobny proces (nie Job — unika problemow z PS 5.1)
-$guiProc = Start-Process -FilePath "npm" -ArgumentList "run","dev:gui" `
+$guiProc = Start-Process -FilePath "cmd.exe" -ArgumentList "/c","npm run dev:gui" `
     -WorkingDirectory $ProjectRoot -PassThru -WindowStyle Minimized
 
 Write-Matrix "GUI starting (PID: $($guiProc.Id))..."
