@@ -3,16 +3,18 @@
   Uruchamia Matrix GUI — bridge (z Claude wbudowanym) + GUI w przegladarce.
   Bridge sam spawnuje Claude przez node-pty (dwukierunkowy PTY).
   Wpisz "cm" w PowerShell aby uruchomic.
+  Kompatybilny z Windows PowerShell 5.1 i PowerShell 7+.
 #>
 
 $ProjectRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 $WsPort = 7999
 
-# Kolory Matrix
-$green = "`e[32m"
-$dim = "`e[2m"
-$red = "`e[31m"
-$reset = "`e[0m"
+# Kolory Matrix (kompatybilne z PS 5.1 — [char]27 zamiast `e)
+$esc = [char]27
+$green = "${esc}[32m"
+$dim = "${esc}[2m"
+$red = "${esc}[31m"
+$reset = "${esc}[0m"
 
 function Write-Matrix($msg) { Write-Host "${green}[MATRIX]${reset} $msg" }
 function Write-MatrixDim($msg) { Write-Host "${dim}  $msg${reset}" }
@@ -51,9 +53,9 @@ $guiJob = Start-Job -ScriptBlock {
 
 Write-Matrix "GUI starting (Job: $($guiJob.Id))..."
 
-# 3. Czekaj na GUI
+# 3. Czekaj na GUI (uzyj 127.0.0.1 zamiast localhost — unika problemow z IPv6)
 Write-Matrix "Waiting for GUI server..."
-$maxWait = 15
+$maxWait = 30
 $waited = 0
 $guiReady = $false
 
@@ -64,7 +66,7 @@ while ($waited -lt $maxWait) {
     if (-not $guiReady) {
         try {
             $tcp = New-Object System.Net.Sockets.TcpClient
-            $tcp.Connect("localhost", 5173)
+            $tcp.Connect("127.0.0.1", 5173)
             $tcp.Close()
             $guiReady = $true
             Write-MatrixDim "GUI ready on :5173"
