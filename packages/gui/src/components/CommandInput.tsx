@@ -50,7 +50,8 @@ export function CommandInput({ send, autoShow = false }: CommandInputProps) {
       setVisible(false);
       return;
     }
-    if (e.ctrlKey && e.key === 'Enter') {
+    // Enter = submit, Shift+Enter = new line
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
       return;
@@ -86,7 +87,7 @@ export function CommandInput({ send, autoShow = false }: CommandInputProps) {
         />
       </div>
       <div className="command-input__footer">
-        <span>CTRL+ENTER send</span>
+        <span>ENTER send</span>
         <span className="command-input__sep">│</span>
         <span>ESC hide</span>
         <span className="command-input__sep">│</span>

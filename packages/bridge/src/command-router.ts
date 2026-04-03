@@ -42,7 +42,7 @@ export class CommandRouter {
         if (text.length > MAX_LENGTH) {
           return { ok: false, error: `Text exceeds max length (${MAX_LENGTH})` };
         }
-        this.writer.writeStdin(text + '\n');
+        this.writer.writeStdin(text + '\r');
         console.log(`Command sent: ${text.substring(0, 80)}${text.length > 80 ? '...' : ''}`);
         return { ok: true };
       }
@@ -51,7 +51,7 @@ export class CommandRouter {
         console.log('Command: interrupt (Ctrl+C)');
         return { ok: true };
       case 'confirm':
-        this.writer.writeStdin('\n');
+        this.writer.writeStdin('\r');
         console.log('Command: confirm (Enter)');
         return { ok: true };
       default:
