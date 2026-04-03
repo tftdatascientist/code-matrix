@@ -9,7 +9,7 @@
 $ProjectRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 $WsPort = 7999
 
-# Kolory Matrix (kompatybilne z PS 5.1 — [char]27 zamiast `e)
+# Kolory Matrix (kompatybilne z PS 5.1)
 $esc = [char]27
 $green = "${esc}[32m"
 $dim = "${esc}[2m"
@@ -40,20 +40,13 @@ if ($oldPids) {
     Start-Sleep -Seconds 1
 }
 
-# 1. Set env for node-pty mode
-$env:MATRIX_PTY_SOURCE = "node-pty"
-$env:MATRIX_COMMAND_ENABLED = "true"
+# 1. Uruchom GUI w tle jako osobny proces (nie Job — unika problemow z PS 5.1)
+$guiProc = Start-Process -FilePath "npm" -ArgumentList "run","dev:gui" `
+    -WorkingDirectory $ProjectRoot -PassThru -WindowStyle Minimized
 
-# 2. Uruchom GUI w tle (jako Job)
-$guiJob = Start-Job -ScriptBlock {
-    param($root)
-    Set-Location $root
-    & npm run dev:gui 2>&1
-} -ArgumentList $ProjectRoot
+Write-Matrix "GUI starting (PID: $($guiProc.Id))..."
 
-Write-Matrix "GUI starting (Job: $($guiJob.Id))..."
-
-# 3. Czekaj na GUI (uzyj 127.0.0.1 zamiast localhost — unika problemow z IPv6)
+# 2. Czekaj na GUI
 Write-Matrix "Waiting for GUI server..."
 $maxWait = 30
 $waited = 0
@@ -63,34 +56,33 @@ while ($waited -lt $maxWait) {
     Start-Sleep -Seconds 1
     $waited++
 
-    if (-not $guiReady) {
-        try {
-            $tcp = New-Object System.Net.Sockets.TcpClient
-            $tcp.Connect("127.0.0.1", 5173)
-            $tcp.Close()
-            $guiReady = $true
-            Write-MatrixDim "GUI ready on :5173"
-        } catch { }
+    if ($guiProc.HasExited) {
+        Write-MatrixError "GUI process exited unexpectedly (code: $($guiProc.ExitCode))"
+        return
     }
 
-    if ($guiReady) { break }
+    try {
+        $tcp = New-Object System.Net.Sockets.TcpClient
+        $tcp.Connect("127.0.0.1", 5173)
+        $tcp.Close()
+        $guiReady = $true
+        Write-MatrixDim "GUI ready on :5173 (${waited}s)"
+        break
+    } catch { }
 }
 
 if (-not $guiReady) {
     Write-MatrixError "GUI failed to start in ${maxWait}s."
-    Receive-Job -Job $guiJob 2>&1 | Write-Host
-    Stop-Job -Job $guiJob -ErrorAction SilentlyContinue
-    Remove-Job -Job $guiJob -Force -ErrorAction SilentlyContinue
+    Stop-Process -Id $guiProc.Id -Force -ErrorAction SilentlyContinue
     return
 }
 
-# 4. Otworz GUI w przegladarce
+# 3. Otworz GUI w przegladarce
 Start-Process "http://localhost:5173"
 Write-Matrix "GUI opened in browser"
 
-# 5. Uruchom bridge na pierwszym planie (bridge spawnuje Claude sam)
+# 4. Uruchom bridge na pierwszym planie (bridge spawnuje Claude sam)
 Write-Matrix "Starting Bridge + Claude (node-pty)..."
-Write-Matrix "Claude will start inside the bridge. Use GUI or this terminal."
 Write-Matrix "Press Ctrl+C to stop everything."
 Write-Host ""
 
@@ -102,11 +94,23 @@ finally {
     Write-Host ""
     Write-Matrix "Shutting down..."
 
-    # Zatrzymaj GUI job
-    Stop-Job -Job $guiJob -ErrorAction SilentlyContinue
-    Remove-Job -Job $guiJob -Force -ErrorAction SilentlyContinue
+    # Zatrzymaj GUI proces i jego dzieci
+    if (-not $guiProc.HasExited) {
+        Stop-Process -Id $guiProc.Id -Force -ErrorAction SilentlyContinue
+    }
+    # Zabij ewentualne procesy node Vite (dzieci GUI)
+    Get-Process -Name "node" -ErrorAction SilentlyContinue |
+        Where-Object { $_.MainWindowTitle -eq '' } |
+        ForEach-Object {
+            try {
+                $cmdLine = (Get-CimInstance Win32_Process -Filter "ProcessId = $($_.Id)" -ErrorAction SilentlyContinue).CommandLine
+                if ($cmdLine -and $cmdLine -match 'vite') {
+                    Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
+                }
+            } catch { }
+        }
 
-    # Zabij procesy node na porcie bridge
+    # Zabij procesy na porcie bridge
     $procIds = netstat -ano | Select-String ":$WsPort\s" | ForEach-Object {
         ($_ -split '\s+')[-1]
     } | Sort-Object -Unique | Where-Object { $_ -match '^\d+$' -and $_ -ne '0' }
@@ -114,10 +118,6 @@ finally {
     foreach ($procId in $procIds) {
         Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
     }
-
-    # Wyczysc env
-    Remove-Item Env:\MATRIX_PTY_SOURCE -ErrorAction SilentlyContinue
-    Remove-Item Env:\MATRIX_COMMAND_ENABLED -ErrorAction SilentlyContinue
 
     Write-Matrix "Disconnected."
 }
