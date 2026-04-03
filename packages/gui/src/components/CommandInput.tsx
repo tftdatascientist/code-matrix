@@ -12,7 +12,6 @@ const MAX_LENGTH = 10000;
 export function CommandInput({ send, autoShow = false }: CommandInputProps) {
   const [visible, setVisible] = useState(autoShow);
   const [value, setValue] = useState('');
-  const [confirm, setConfirm] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // Ctrl+/ toggle
@@ -42,20 +41,13 @@ export function CommandInput({ send, autoShow = false }: CommandInputProps) {
     const trimmed = value.trim();
     if (!trimmed) return;
 
-    if (!confirm) {
-      setConfirm(true);
-      return;
-    }
-
     sendCommand('text', trimmed);
     setValue('');
-    setConfirm(false);
-  }, [value, confirm, sendCommand]);
+  }, [value, sendCommand]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
       setVisible(false);
-      setConfirm(false);
       return;
     }
     if (e.ctrlKey && e.key === 'Enter') {
@@ -63,11 +55,7 @@ export function CommandInput({ send, autoShow = false }: CommandInputProps) {
       handleSubmit();
       return;
     }
-    // Cancel confirm on any other key
-    if (confirm && e.key !== 'Enter') {
-      setConfirm(false);
-    }
-  }, [handleSubmit, confirm]);
+  }, [handleSubmit]);
 
   const handleInterrupt = useCallback(() => {
     sendCommand('interrupt');
@@ -97,11 +85,6 @@ export function CommandInput({ send, autoShow = false }: CommandInputProps) {
           spellCheck={false}
         />
       </div>
-      {confirm && (
-        <div className="command-input__confirm">
-          ⚠ Send this command? Press Ctrl+Enter again to confirm, Esc to cancel.
-        </div>
-      )}
       <div className="command-input__footer">
         <span>CTRL+ENTER send</span>
         <span className="command-input__sep">│</span>
