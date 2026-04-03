@@ -24,6 +24,17 @@ export class BridgeWSServer {
     this.wss = new WebSocketServer({ port });
     this.buffer = { chunks: [], maxSize: bufferSize };
 
+    this.wss.on('error', (err: NodeJS.ErrnoException) => {
+      if (err.code === 'EADDRINUSE') {
+        console.error(`\n[ERROR] Port ${port} is already in use.`);
+        console.error(`  Another bridge instance may be running.`);
+        console.error(`  Kill it with: taskkill /F /PID $(netstat -ano | findstr :${port} | head -1 | awk '{print $NF}')`);
+        console.error(`  Or restart with the "m" command which auto-cleans old processes.\n`);
+        process.exit(1);
+      }
+      throw err;
+    });
+
     this.wss.on('connection', (ws) => {
       console.log(`GUI client connected (total: ${this.wss.clients.size})`);
 
